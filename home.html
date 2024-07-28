@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Anonymous Bot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            background-color: #87CEEB;
+            color: white;
+            width: 240px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Ensures footer is pushed to the bottom */
+            position: fixed;
+            height: 100%;
+            z-index: 2; /* Ensure sidebar is on top */
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .top-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .footer {
+            text-align: center;
+            margin-top: auto; /* Pushes footer to the bottom */
+        }
+        .content {
+            margin-left: 280px; /* Increased margin to accommodate the sidebar */
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 150px); /* Adjust height to fit within the viewport */
+        }
+        .input-section {
+            display: flex;
+            flex-direction: column; /* Arrange input fields one below the other */
+            position: fixed;
+            bottom: 0;
+            left: 270px; /* Align with content area */
+            width: calc(100% - 270px);
+            padding: 10px 20px;
+            background: white;
+            border-top: 1px solid #ccc;
+            z-index: 1; /* Ensure input section is below the content */
+        }
+        .form-group {
+            position: relative; /* Create positioning context for icons */
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            padding: 15px;
+            padding-right: 50px; /* Space for icons inside the input */
+            width: calc(100% - 50px); /* Adjust width to fit icons */
+            border: 1px solid #8d8989;
+            border-radius: 6px;
+            box-sizing: border-box; /* Include padding and border in element’s total width and height */
+        }
+        .icon-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 2; /* Ensure icon is above input */
+        }
+        .icon {
+            font-size: 20px; /* Adjust icon size */
+            color: #87CEEB; /* Match icon color with sidebar */
+        }
+        .icon-button.mic {
+            right: 100px; /* Space for microphone icon */
+        }
+        .icon-button.search {
+            right: 50px; /* Space for search icon */
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 0;
+        }
+        li {
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background-color: #c4e9f7;
+            line-height: 1.5; /* Set line height to 1.5 */
+        }
+        .content p, .content h2 {
+            line-height: 1.5; /* Set line height to 1.5 */
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="top-section">
+            <div class="logo">ANONYMOUS</div>
+            <a href="/logout" class="icon-button logout"><i class="fas fa-sign-out-alt icon"></i></a>
+        </div>
+        <div class="footer">
+            <a href="#">Service Policy</a>
+            <a href='#'>&copy; 2024 Anonymous. All rights reserved.</a>
+        </div>
+    </div>
+    <div class="content">
+        <h1>Welcome, {{ session['username'] }}</h1>
+        <h2>History</h2>
+        {% if history %}
+            <ul>
+            {% for entry in history %}
+                <li>
+                    <strong>Question:</strong> {{ entry['question'] }}<br>
+                    {% if entry['source'] %}
+                        <br><strong>Original Answer:</strong><br>
+                        {{ entry['answer'] | safe }}<br>
+                        <br><strong>Original Content:</strong><br>
+                        {{ entry['content_excerpt'] | safe }}<br>
+                        <br><strong>Paraphrased Content:</strong><br>
+                        {{ entry['paraphrased_content_excerpt'] | safe }}<br>
+                        <br><strong>Sources:</strong><br>
+                        {% for link in entry['source'].split(',') %}
+                            <a href="{{ link.strip() }}" target="_blank">{{ link.strip() }}</a><br>
+                        {% endfor %}
+                    {% else %}
+                        <br><strong>Original Answer:</strong><br>
+                        {{ entry['answer'] | safe }}<br>
+                        <br><strong>Paraphrased Answer:</strong><br>
+                        {{ entry['paraphrased_answer'] | safe }}<br>
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No history available.</p>
+        {% endif %}
+    </div>
+    <div class="input-section">
+        <form method="post" id="question-form">
+            <div class="form-group">
+                <input type="text" id="Question" name="Question" placeholder="Ask a question" required>
+                <button type="button" class="icon-button mic" onclick="startListening()">
+                    <i class="fas fa-microphone icon"></i>
+                </button>
+                <button type="submit" class="icon-button search">
+                    <i class="fas fa-search icon"></i>
+                </button>
+            </div>
+            <input type="text" id="Urls" name="Urls" placeholder="Provide URLs (comma separated)">
+        </form>
+    </div>
+
+    <script>
+        function startListening() {
+            var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+                document.getElementById('Question').value = transcript;
+                document.getElementById('question-form').submit();
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error detected: ' + event.error);
+            };
+
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
